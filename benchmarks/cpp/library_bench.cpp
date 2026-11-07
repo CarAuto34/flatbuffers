@@ -93,12 +93,14 @@ static LoadedParser& Loaded() {
   return loaded;
 }
 
-// Parse the monster_test.fbs schema (with its includes).
+// Parse the reflection.fbs schema from memory. This schema has no includes, so
+// the benchmark does not touch the filesystem.
 static void BM_Parser_ParseSchema(benchmark::State& state) {
-  const MonsterInputs& inputs = Inputs();
+  const std::string schema = LoadOrDie(kRootDir + "/reflection/reflection.fbs");
   for (auto _ : state) {
     flatbuffers::Parser parser;
-    inputs.ParseSchema(parser);
+    bool ok = parser.Parse(schema.c_str());
+    benchmark::DoNotOptimize(ok);
     benchmark::DoNotOptimize(parser.structs_.vec.size());
   }
 }
