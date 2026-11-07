@@ -14,10 +14,17 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG        e2239ee6043f73722e7aa812a459f54a28552929 # release-1.11.0
 )
+# CodSpeed's fork of Google Benchmark. It behaves exactly like upstream Google
+# Benchmark unless CODSPEED_MODE is set (e.g. -DCODSPEED_MODE=simulation), in
+# which case the benchmarks report their measurements to CodSpeed.
+# See https://codspeed.io/docs/benchmarks/cpp
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     googlebenchmark
-    GIT_REPOSITORY https://github.com/google/benchmark.git
-    GIT_TAG        0d98dba29d66e93259db7daa53a9327df767a415 # v1.6.1
+    GIT_REPOSITORY https://github.com/CodSpeedHQ/codspeed-cpp.git
+    GIT_TAG        v2.4.0
+    SOURCE_SUBDIR  google_benchmark
 )
 
 # For Windows: Prevent overriding the parent project's compiler/linker 
@@ -38,6 +45,7 @@ set(FlatBenchmark_SRCS
     ${CPP_BENCH_DIR}/benchmark_main.cpp
     ${CPP_FB_BENCH_DIR}/fb_bench.cpp
     ${CPP_RAW_BENCH_DIR}/raw_bench.cpp
+    ${CPP_BENCH_DIR}/library_bench.cpp
     ${CPP_BENCH_FB_GEN}
 )
 
@@ -82,7 +90,13 @@ set_target_properties(flatbenchmark
 # The includes of the benchmark files are fully qualified from flatbuffers root.
 target_include_directories(flatbenchmark PUBLIC ${CMAKE_SOURCE_DIR})
 
+# Root of the repository, used by the benchmarks to load test schemas and data.
+target_compile_definitions(flatbenchmark PRIVATE
+    FLATBUFFERS_BENCH_ROOT_DIR="${CMAKE_SOURCE_DIR}"
+)
+
 target_link_libraries(flatbenchmark PRIVATE
     benchmark::benchmark_main # _main to use their entry point 
+    flatbuffers # The runtime library (parser, text generation, reflection)
     gtest # Link to gtest so we can also assert in the benchmarks
 )

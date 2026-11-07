@@ -1,0 +1,38 @@
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # required for actions/checkout
+      id-token: write # required for OIDC authentication with CodSpeed
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build the benchmarks
+        run: |
+          cmake -B build -G "Unix Makefiles" \
+            -DFLATBUFFERS_CXX_FLAGS="-Wno-unused-parameter -fno-aligned-new" \
+            -DFLATBUFFERS_BUILD_BENCHMARKS=ON \
+            -DFLATBUFFERS_BUILD_TESTS=OFF \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCODSPEED_MODE=simulation \
+            .
+          cmake --build build --target flatbenchmark -j "$(nproc)"
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v5
+        with:
+          mode: simulation
+          run: ./build/flatbenchmark
